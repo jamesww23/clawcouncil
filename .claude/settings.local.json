@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(clang++:*)",
+      "Bash(CXXFLAGS=\"-std=c++20\" npm install:*)",
+      "Bash(npm show:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)"
+    ]
+  }
+}
