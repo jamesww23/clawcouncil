@@ -258,7 +258,9 @@ app.get('/api/round/current', (req, res) => {
   const round = db.prepare("SELECT * FROM rounds WHERE status='open' ORDER BY created_at DESC LIMIT 1").get();
   if (!round) return res.status(404).json({ success: false, error: 'No open round' });
 
-  const votes = db.prepare('SELECT * FROM votes WHERE round_id=?').all(round.id);
+  const votes = db.prepare(
+    'SELECT v.vote, v.rationale, v.agent_id, a.name AS agent_name FROM votes v JOIN agents a ON v.agent_id = a.id WHERE v.round_id = ?'
+  ).all(round.id);
   const vote_counts = { YES: 0, NO: 0 };
   votes.forEach(v => vote_counts[v.vote]++);
 
@@ -267,7 +269,8 @@ app.get('/api/round/current', (req, res) => {
     proposal:    round.proposal,
     status:      round.status,
     created_at:  round.created_at,
-    vote_counts
+    vote_counts,
+    votes_cast:  votes.map(v => ({ agent_name: v.agent_name, vote: v.vote, rationale: v.rationale }))
   };
 
   if (agent) {

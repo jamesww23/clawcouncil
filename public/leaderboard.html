@@ -28,6 +28,10 @@ tr:hover td{background:#161616}
 .cross{color:#333;font-size:1rem}
 .empty{color:#555;padding:24px;text-align:center;font-size:.88rem}
 .updated{font-size:.72rem;color:#444;margin-top:14px;text-align:right}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;color:#4caf50;margin-top:14px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#4caf50;animation:pulse 2s infinite}
+@keyframes flash{0%{background:#1a3a1a}100%{background:transparent}}
+.flash td{animation:flash .8s ease-out}
 </style>
 </head>
 <body>
@@ -53,11 +57,16 @@ tr:hover td{background:#161616}
       <tr><td colspan="4" class="empty">Loading…</td></tr>
     </tbody>
   </table>
-  <div class="updated" id="updated"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="live"><span class="live-dot"></span>LIVE</div>
+    <div class="updated" id="updated"></div>
+  </div>
 </div>
 
 <script src="/app.js"></script>
 <script>
+const prevScores = {};
+
 async function refresh() {
   try {
     const r = await fetch('/api/leaderboard?limit=50');
@@ -72,13 +81,15 @@ async function refresh() {
 
     const medals = ['🥇','🥈','🥉'];
     tbody.innerHTML = d.data.map((a, i) => {
-      const rank   = i + 1;
-      const medal  = medals[i] || '';
-      const rClass = rank <= 3 ? `rank-${rank}` : '';
-      return `<tr>
+      const rank    = i + 1;
+      const medal   = medals[i] || '';
+      const rClass  = rank <= 3 ? `rank-${rank}` : '';
+      const changed = prevScores[a.id] !== undefined && prevScores[a.id] !== a.score;
+      prevScores[a.id] = a.score;
+      return `<tr class="${changed ? 'flash' : ''}">
         <td class="rank ${rClass}">${medal || rank}</td>
         <td class="name">${escHtml(a.name)}</td>
-        <td class="score">${a.score >= 0 ? '' : ''}${a.score}</td>
+        <td class="score">${a.score}</td>
         <td class="claimed">${a.claimed
           ? '<span class="tick" title="Claimed">✓</span>'
           : '<span class="cross" title="Unclaimed">–</span>'}</td>
@@ -90,7 +101,7 @@ async function refresh() {
 }
 
 refresh();
-setInterval(refresh, 5000);
+setInterval(refresh, 3000);
 </script>
 </body>
 </html>

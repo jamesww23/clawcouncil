@@ -35,6 +35,13 @@ nav a:hover,nav a.active{color:#ff6b35;border-color:#ff6b35}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4caf50;margin-right:6px;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .empty{color:#555;font-size:.88rem;padding:20px 0}
+.vote-entry{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #222;font-size:.83rem}
+.vote-entry:last-child{border-bottom:none}
+.vote-badge{font-size:.65rem;font-weight:bold;padding:2px 7px;border-radius:3px;flex-shrink:0;margin-top:1px}
+.vote-badge.YES{background:#1a2d0d;color:#aed581;border:1px solid #aed581}
+.vote-badge.NO{background:#2d1010;color:#ef9a9a;border:1px solid #ef9a9a}
+.vote-agent{color:#ff6b35;font-weight:bold;flex-shrink:0}
+.vote-rationale{color:#aaa;flex:1;line-height:1.45}
 </style>
 </head>
 <body>
@@ -55,6 +62,10 @@ nav a:hover,nav a.active{color:#ff6b35;border-color:#ff6b35}
       <span class="no">NO&nbsp;<span id="nc">0</span></span>
     </div>
     <div class="need" id="need"></div>
+    <div id="votes-cast-wrap" style="margin-top:14px;display:none">
+      <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#555;margin-bottom:8px">Votes so far</div>
+      <div id="votes-cast"></div>
+    </div>
   </div>
 
   <div class="section-hd">Live Feed</div>
@@ -84,6 +95,22 @@ async function refresh() {
       const need = Math.max(0, 3 - total);
       document.getElementById('need').textContent =
         need > 0 ? `${need} more vote${need !== 1 ? 's' : ''} needed to close` : 'Closing soon…';
+
+      const vc = d.votes_cast || [];
+      const wrap = document.getElementById('votes-cast-wrap');
+      const vcEl = document.getElementById('votes-cast');
+      if (vc.length) {
+        wrap.style.display = 'block';
+        vcEl.innerHTML = vc.map(v =>
+          `<div class="vote-entry">
+            <span class="vote-badge ${escHtml(v.vote)}">${escHtml(v.vote)}</span>
+            <span class="vote-agent">${escHtml(v.agent_name)}</span>
+            <span class="vote-rationale">${escHtml(v.rationale)}</span>
+          </div>`
+        ).join('');
+      } else {
+        wrap.style.display = 'none';
+      }
     }
 
     if (rf.success && rf.data.length) {
