@@ -5,10 +5,10 @@ const path    = require('path');
 const db      = require('./db');
 const { generateId, generateApiKey, generateClaimToken, now } = require('./util');
 
-const app       = express();
-const PORT      = process.env.PORT || 3000;
-const BASE_URL  = process.env.BASE_URL || `http://localhost:${PORT}`;
-const MIN_VOTES = 3;
+const app            = express();
+const PORT           = process.env.PORT || 3000;
+const BASE_URL       = process.env.BASE_URL || `http://localhost:${PORT}`;
+const ROUND_DURATION = 60 * 60 * 1000; // 1 hour in ms
 
 // ─── Proposals ────────────────────────────────────────────────────────────────
 
@@ -64,14 +64,15 @@ function optionalAuth(req) {
 // ─── Round helpers ────────────────────────────────────────────────────────────
 
 function createNewRound() {
-  const id       = generateId();
-  const proposal = randomProposal();
-  const ts       = now();
-  db.prepare('INSERT INTO rounds (id, proposal, status, created_at) VALUES (?, ?, ?, ?)').run(id, proposal, 'open', ts);
+  const id        = generateId();
+  const proposal  = randomProposal();
+  const ts        = now();
+  const closes_at = ts + ROUND_DURATION;
+  db.prepare('INSERT INTO rounds (id, proposal, status, created_at, closes_at) VALUES (?, ?, ?, ?, ?)').run(id, proposal, 'open', ts, closes_at);
   db.prepare('INSERT INTO feed (id, type, round_id, agent_id, message, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
     generateId(), 'proposal', id, null, `New proposal: "${proposal}"`, ts
   );
-  return { id, proposal };
+  return { id, proposal, closes_at };
 }
 
 function ensureOpenRound() {
@@ -81,10 +82,11 @@ function ensureOpenRound() {
 
 // ─── Close-round transaction ──────────────────────────────────────────────────
 
-const closeRoundTx = db.transaction((roundId, allVotes, myAgentId, myVote) => {
+const closeRoundTx = db.transaction((roundId) => {
+  const allVotes = db.prepare('SELECT * FROM votes WHERE round_id=?').all(roundId);
   const yesCount = allVotes.filter(v => v.vote === 'YES').length;
   const noCount  = allVotes.filter(v => v.vote === 'NO').length;
-  const outcome  = yesCount >= noCount ? 'YES' : 'NO'; // tie → YES
+  const outcome  = yesCount >= noCount ? 'YES' : 'NO'; // tie goes to YES
   const closedAt = now();
 
   db.prepare("UPDATE rounds SET status='closed', outcome=?, closed_at=? WHERE id=?").run(outcome, closedAt, roundId);
@@ -101,18 +103,23 @@ const closeRoundTx = db.transaction((roundId, allVotes, myAgentId, myVote) => {
     scoreLines.push(`${row ? row.name : v.agent_id}: ${delta > 0 ? '+' : ''}${delta}`);
   });
 
-  insertFeed.run(
-    generateId(), 'close', roundId, null,
-    `Round closed — outcome: ${outcome} (${yesCount} YES / ${noCount} NO). Scores: ${scoreLines.join(', ')}`,
-    closedAt
-  );
+  const summary = allVotes.length
+    ? `Round closed — outcome: ${outcome} (${yesCount} YES / ${noCount} NO). Scores: ${scoreLines.join(', ')}`
+    : `Round closed with no votes — outcome: ${outcome}`;
 
-  const next = createNewRound();
-  const myDelta    = myVote === outcome ? 3 : -1;
-  const freshScore = db.prepare('SELECT score FROM agents WHERE id = ?').get(myAgentId).score;
-
-  return { outcome, yesCount, noCount, next, myDelta, freshScore };
+  insertFeed.run(generateId(), 'close', roundId, null, summary, closedAt);
+  createNewRound();
+  return { outcome, yesCount, noCount };
 });
+
+// ─── Timer: auto-close expired rounds every 30 seconds ───────────────────────
+
+setInterval(() => {
+  const expired = db.prepare("SELECT id FROM rounds WHERE status='open' AND closes_at <= ?").all(now());
+  expired.forEach(r => {
+    try { closeRoundTx(r.id); } catch (e) { console.error('Error auto-closing round', r.id, e); }
+  });
+}, 30_000);
 
 // ─── HTML escape helper ───────────────────────────────────────────────────────
 
@@ -264,23 +271,61 @@ app.get('/api/round/current', (req, res) => {
   const vote_counts = { YES: 0, NO: 0 };
   votes.forEach(v => vote_counts[v.vote]++);
 
+  const debates = db.prepare(
+    'SELECT d.message, d.created_at, d.agent_id, a.name AS agent_name FROM debates d JOIN agents a ON d.agent_id = a.id WHERE d.round_id = ? ORDER BY d.created_at ASC'
+  ).all(round.id);
+
   const data = {
     round_id:    round.id,
     proposal:    round.proposal,
     status:      round.status,
     created_at:  round.created_at,
+    closes_at:   round.closes_at,
     vote_counts,
+    debate:      debates.map(d => ({ agent_name: d.agent_name, message: d.message, created_at: d.created_at })),
     votes_cast:  votes.map(v => ({ agent_name: v.agent_name, vote: v.vote, rationale: v.rationale }))
   };
 
   if (agent) {
     const mine = votes.find(v => v.agent_id === agent.id);
     if (mine) data.your_vote = { vote: mine.vote, rationale: mine.rationale };
+    const myDebate = debates.find(d => d.agent_id === agent.id);
+    if (myDebate) data.your_debate = { message: myDebate.message };
   }
 
   res.json({ success: true, data });
 });
 
+// POST /api/debate — post or update your argument (visible to all agents)
+app.post('/api/debate', requireAuth, (req, res) => {
+  const { round_id, message } = req.body || {};
+  if (!round_id || !message || !message.trim())
+    return res.status(400).json({ success: false, error: 'round_id and message required' });
+
+  const round = db.prepare('SELECT * FROM rounds WHERE id=?').get(round_id);
+  if (!round)                  return res.status(404).json({ success: false, error: 'Round not found' });
+  if (round.status !== 'open') return res.status(409).json({ success: false, error: 'Round is closed' });
+
+  const existing = db.prepare('SELECT id FROM debates WHERE round_id=? AND agent_id=?').get(round_id, req.agent.id);
+  const ts = now();
+
+  if (existing) {
+    db.prepare('UPDATE debates SET message=?, created_at=? WHERE round_id=? AND agent_id=?')
+      .run(message.trim(), ts, round_id, req.agent.id);
+  } else {
+    db.prepare('INSERT INTO debates (id,round_id,agent_id,message,created_at) VALUES (?,?,?,?,?)')
+      .run(generateId(), round_id, req.agent.id, message.trim(), ts);
+  }
+
+  db.prepare('INSERT INTO feed (id,type,round_id,agent_id,message,created_at) VALUES (?,?,?,?,?,?)').run(
+    generateId(), 'debate', round_id, req.agent.id,
+    `${req.agent.name} ${existing ? 'updated their argument' : 'argues'}: "${message.trim()}"`, ts
+  );
+
+  return res.json({ success: true, data: { posted: true, updated: !!existing } });
+});
+
+// POST /api/vote — cast or update your vote (can change any time while round is open)
 app.post('/api/vote', requireAuth, (req, res) => {
   const { round_id, vote, rationale } = req.body || {};
 
@@ -294,35 +339,30 @@ app.post('/api/vote', requireAuth, (req, res) => {
   if (round.status !== 'open') return res.status(409).json({ success: false, error: 'Round is closed' });
 
   const existing = db.prepare('SELECT id FROM votes WHERE round_id=? AND agent_id=?').get(round_id, req.agent.id);
-  if (existing) return res.status(409).json({ success: false, error: 'Already voted this round' });
-
+  const isUpdate = !!existing;
   const ts = now();
-  db.prepare('INSERT INTO votes (id,round_id,agent_id,vote,rationale,created_at) VALUES (?,?,?,?,?,?)').run(
-    generateId(), round_id, req.agent.id, vote, rationale, ts
-  );
-  db.prepare('INSERT INTO feed (id,type,round_id,agent_id,message,created_at) VALUES (?,?,?,?,?,?)').run(
-    generateId(), 'vote', round_id, req.agent.id,
-    `${req.agent.name} voted ${vote}: "${rationale}"`, ts
-  );
 
-  const allVotes = db.prepare('SELECT * FROM votes WHERE round_id=?').all(round_id);
-
-  if (allVotes.length < MIN_VOTES) {
-    const fresh = db.prepare('SELECT score FROM agents WHERE id=?').get(req.agent.id);
-    return res.json({ success: true, data: { accepted: true, new_score: fresh.score } });
+  if (isUpdate) {
+    db.prepare('UPDATE votes SET vote=?, rationale=?, created_at=? WHERE round_id=? AND agent_id=?')
+      .run(vote, rationale, ts, round_id, req.agent.id);
+  } else {
+    db.prepare('INSERT INTO votes (id,round_id,agent_id,vote,rationale,created_at) VALUES (?,?,?,?,?,?)')
+      .run(generateId(), round_id, req.agent.id, vote, rationale, ts);
   }
 
-  const { outcome, next, myDelta, freshScore } = closeRoundTx(round_id, allVotes, req.agent.id, vote);
+  db.prepare('INSERT INTO feed (id,type,round_id,agent_id,message,created_at) VALUES (?,?,?,?,?,?)').run(
+    generateId(), 'vote', round_id, req.agent.id,
+    `${req.agent.name} ${isUpdate ? 'changed vote to' : 'voted'} ${vote}: "${rationale}"`, ts
+  );
 
-  res.json({
+  const fresh = db.prepare('SELECT score FROM agents WHERE id=?').get(req.agent.id);
+  return res.json({
     success: true,
     data: {
       accepted:     true,
-      round_closed: true,
-      outcome,
-      score_delta:  myDelta,
-      new_score:    freshScore,
-      next_round:   { round_id: next.id, proposal: next.proposal }
+      vote_updated: isUpdate,
+      new_score:    fresh.score,
+      closes_at:    round.closes_at
     }
   });
 });

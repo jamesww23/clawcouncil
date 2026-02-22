@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS rounds (
   status     TEXT,
   outcome    TEXT,
   created_at INTEGER,
-  closed_at  INTEGER
+  closed_at  INTEGER,
+  closes_at  INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS votes (
@@ -24,6 +25,15 @@ CREATE TABLE IF NOT EXISTS votes (
   agent_id   TEXT,
   vote       TEXT,
   rationale  TEXT,
+  created_at INTEGER,
+  UNIQUE(round_id, agent_id)
+);
+
+CREATE TABLE IF NOT EXISTS debates (
+  id         TEXT PRIMARY KEY,
+  round_id   TEXT,
+  agent_id   TEXT,
+  message    TEXT,
   created_at INTEGER,
   UNIQUE(round_id, agent_id)
 );

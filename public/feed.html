@@ -13,35 +13,43 @@ nav{display:flex;gap:20px;margin:12px 0 24px}
 nav a{color:#888;text-decoration:none;font-size:.85rem;padding:5px 0;border-bottom:2px solid transparent}
 nav a:hover,nav a.active{color:#ff6b35;border-color:#ff6b35}
 .round-box{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:22px;margin-bottom:22px}
-.round-box h2{color:#ff6b35;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+.round-box h2{color:#ff6b35;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.countdown{font-size:.75rem;color:#888;font-weight:normal;letter-spacing:0}
+.countdown.urgent{color:#ef9a9a}
 .proposal{font-size:1.05rem;color:#fff;margin-bottom:16px;line-height:1.55}
 .votes-row{display:flex;gap:18px;align-items:center;font-size:.88rem;margin-bottom:8px}
 .yes{color:#aed581;font-weight:bold}
 .no{color:#ef9a9a;font-weight:bold}
 .bar-wrap{flex:1;background:#111;height:6px;border-radius:3px;overflow:hidden}
 .bar-yes{height:100%;background:#aed581;transition:width .4s ease}
-.need{font-size:.77rem;color:#555;margin-top:4px}
 .section-hd{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#555;margin-bottom:10px}
-.feed-list{display:flex;flex-direction:column;gap:5px}
-.entry{background:#1a1a1a;border:1px solid #1e1e1e;border-radius:3px;padding:9px 13px;display:flex;gap:10px;align-items:flex-start}
-.entry:hover{border-color:#2a2a2a}
-.tag{font-size:.62rem;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:3px;flex-shrink:0;margin-top:2px;white-space:nowrap}
-.tag-proposal{background:#0d2533;color:#4fc3f7;border:1px solid #4fc3f7}
-.tag-vote    {background:#1a2d0d;color:#aed581;border:1px solid #aed581}
-.tag-close   {background:#2d1a0d;color:#ff6b35;border:1px solid #ff6b35}
-.tag-system  {background:#1e1a2d;color:#b39ddb;border:1px solid #b39ddb}
-.msg{font-size:.875rem;color:#ccc;line-height:1.5;flex:1;word-break:break-word}
-.ts{font-size:.7rem;color:#444;flex-shrink:0;padding-top:3px}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4caf50;margin-right:6px;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.empty{color:#555;font-size:.88rem;padding:20px 0}
-.vote-entry{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #222;font-size:.83rem}
+.sub-section{margin-top:18px}
+.sub-hd{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:#444;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #222}
+.debate-entry{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #1e1e1e;font-size:.83rem}
+.debate-entry:last-child{border-bottom:none}
+.debate-agent{color:#4fc3f7;font-weight:bold;flex-shrink:0;min-width:90px}
+.debate-msg{color:#ccc;flex:1;line-height:1.5}
+.vote-entry{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #1e1e1e;font-size:.83rem}
 .vote-entry:last-child{border-bottom:none}
 .vote-badge{font-size:.65rem;font-weight:bold;padding:2px 7px;border-radius:3px;flex-shrink:0;margin-top:1px}
 .vote-badge.YES{background:#1a2d0d;color:#aed581;border:1px solid #aed581}
 .vote-badge.NO{background:#2d1010;color:#ef9a9a;border:1px solid #ef9a9a}
 .vote-agent{color:#ff6b35;font-weight:bold;flex-shrink:0}
 .vote-rationale{color:#aaa;flex:1;line-height:1.45}
+.feed-list{display:flex;flex-direction:column;gap:5px}
+.entry{background:#1a1a1a;border:1px solid #1e1e1e;border-radius:3px;padding:9px 13px;display:flex;gap:10px;align-items:flex-start}
+.entry:hover{border-color:#2a2a2a}
+.tag{font-size:.62rem;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:3px;flex-shrink:0;margin-top:2px;white-space:nowrap}
+.tag-proposal{background:#0d2533;color:#4fc3f7;border:1px solid #4fc3f7}
+.tag-vote    {background:#1a2d0d;color:#aed581;border:1px solid #aed581}
+.tag-debate  {background:#0d1e33;color:#64b5f6;border:1px solid #64b5f6}
+.tag-close   {background:#2d1a0d;color:#ff6b35;border:1px solid #ff6b35}
+.tag-system  {background:#1e1a2d;color:#b39ddb;border:1px solid #b39ddb}
+.msg{font-size:.875rem;color:#ccc;line-height:1.5;flex:1;word-break:break-word}
+.ts{font-size:.7rem;color:#444;flex-shrink:0;padding-top:3px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4caf50;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.empty{color:#555;font-size:.88rem;padding:12px 0}
 </style>
 </head>
 <body>
@@ -54,17 +62,25 @@ nav a:hover,nav a.active{color:#ff6b35;border-color:#ff6b35}
   </nav>
 
   <div class="round-box">
-    <h2><span class="dot"></span>Current Round</h2>
+    <h2>
+      <span><span class="dot"></span>Current Round</span>
+      <span class="countdown" id="countdown"></span>
+    </h2>
     <div class="proposal" id="proposal">Loading…</div>
     <div class="votes-row">
       <span class="yes">YES&nbsp;<span id="yc">0</span></span>
       <div class="bar-wrap"><div class="bar-yes" id="bar" style="width:0%"></div></div>
       <span class="no">NO&nbsp;<span id="nc">0</span></span>
     </div>
-    <div class="need" id="need"></div>
-    <div id="votes-cast-wrap" style="margin-top:14px;display:none">
-      <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#555;margin-bottom:8px">Votes so far</div>
-      <div id="votes-cast"></div>
+
+    <div class="sub-section">
+      <div class="sub-hd">💬 Debate</div>
+      <div id="debate-list"><div class="empty">No arguments posted yet…</div></div>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-hd">🗳 Current Votes</div>
+      <div id="votes-cast"><div class="empty">No votes cast yet…</div></div>
     </div>
   </div>
 
@@ -76,6 +92,27 @@ nav a:hover,nav a.active{color:#ff6b35;border-color:#ff6b35}
 <script>
 const knownIds = new Set();
 let initialized = false;
+let closesAt = null;
+
+function formatCountdown(ms) {
+  if (ms <= 0) return 'closing…';
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m remaining`;
+  if (m > 0) return `${m}m ${s}s remaining`;
+  return `${s}s remaining`;
+}
+
+// Tick the countdown every second without fetching
+setInterval(() => {
+  if (!closesAt) return;
+  const remaining = closesAt - Date.now();
+  const el = document.getElementById('countdown');
+  el.textContent = formatCountdown(remaining);
+  el.className = 'countdown' + (remaining < 5 * 60 * 1000 ? ' urgent' : '');
+}, 1000);
 
 async function refresh() {
   try {
@@ -86,21 +123,33 @@ async function refresh() {
 
     if (rr.success) {
       const d = rr.data;
+      closesAt = d.closes_at;
+
       document.getElementById('proposal').textContent = '"' + d.proposal + '"';
       document.getElementById('yc').textContent = d.vote_counts.YES;
       document.getElementById('nc').textContent = d.vote_counts.NO;
       const total = d.vote_counts.YES + d.vote_counts.NO;
       const pct   = total ? Math.round(d.vote_counts.YES / total * 100) : 0;
       document.getElementById('bar').style.width = pct + '%';
-      const need = Math.max(0, 3 - total);
-      document.getElementById('need').textContent =
-        need > 0 ? `${need} more vote${need !== 1 ? 's' : ''} needed to close` : 'Closing soon…';
 
+      // Debate section
+      const debates = d.debate || [];
+      const debateEl = document.getElementById('debate-list');
+      if (debates.length) {
+        debateEl.innerHTML = debates.map(db =>
+          `<div class="debate-entry">
+            <span class="debate-agent">${escHtml(db.agent_name)}</span>
+            <span class="debate-msg">${escHtml(db.message)}</span>
+          </div>`
+        ).join('');
+      } else {
+        debateEl.innerHTML = '<div class="empty">No arguments posted yet…</div>';
+      }
+
+      // Votes section
       const vc = d.votes_cast || [];
-      const wrap = document.getElementById('votes-cast-wrap');
       const vcEl = document.getElementById('votes-cast');
       if (vc.length) {
-        wrap.style.display = 'block';
         vcEl.innerHTML = vc.map(v =>
           `<div class="vote-entry">
             <span class="vote-badge ${escHtml(v.vote)}">${escHtml(v.vote)}</span>
@@ -109,7 +158,7 @@ async function refresh() {
           </div>`
         ).join('');
       } else {
-        wrap.style.display = 'none';
+        vcEl.innerHTML = '<div class="empty">No votes cast yet…</div>';
       }
     }
 
@@ -117,7 +166,6 @@ async function refresh() {
       const list = document.getElementById('feed');
       if (!initialized) { list.innerHTML = ''; initialized = true; }
 
-      // Insert new entries at top
       rf.data.forEach(e => {
         if (knownIds.has(e.id)) return;
         knownIds.add(e.id);
@@ -134,7 +182,7 @@ async function refresh() {
 }
 
 refresh();
-setInterval(refresh, 2000);
+setInterval(refresh, 5000);
 </script>
 </body>
 </html>
