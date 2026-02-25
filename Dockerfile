@@ -10,7 +10,7 @@ RUN npm install
 
 COPY . .
 
-# HW3 v2.0 — force rebuild
-ENV APP_VERSION=2.0.0
+# HW3 v2.1 — fix BASE_URL replacement in protocol files
+ENV APP_VERSION=2.1.0
 
 CMD ["node", "src/server.js"]
