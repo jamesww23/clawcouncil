@@ -5,7 +5,10 @@ const db     = require('../db');
 const { generateId, generateApiKey, generateClaimToken, now } = require('../util');
 const { requireAuth, sendError, esc, agentRateLimit } = require('../middleware');
 
-const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+// Derive base URL from request or env — no more localhost in production
+function getBaseUrl(req) {
+  return process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+}
 
 // ─── POST /api/agents/register ───────────────────────────────────────────────
 
@@ -35,7 +38,7 @@ router.post('/register', (req, res) => {
       data: {
         agent_id: agentId,
         api_key: apiKey,
-        claim_url: `${BASE_URL}/claim/${claimToken}`
+        claim_url: `${getBaseUrl(req)}/claim/${claimToken}`
       },
       request_id: req.requestId
     });

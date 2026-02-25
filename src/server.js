@@ -9,6 +9,9 @@ const roundsRouter = require('./routes/rounds');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust Railway's reverse proxy so req.protocol returns 'https'
+app.set('trust proxy', 1);
+
 // ─── Global middleware ───────────────────────────────────────────────────────
 
 app.use(requestId);
